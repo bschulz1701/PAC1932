@@ -29,8 +29,12 @@ Distributed as-is; no warranty is given.
 
 #define CSA_ADR 0x10
 
+#define CTRL_REG 0x01
 #define COUNT_REG 0x02
 #define BUS_REG 0x07
+
+#define ACCUMULATOR_REG_0  0x03 //Begining of accumator blocks
+#define BLOCK_LEN 6 //Length of accumulator block in bytes 
 
 enum Config {  //Setup configuration values, upper byte is register address, lower byte is shift and mask, lower nibble is shift, upper nibble is mask
   C1RS = 0x0A32,
@@ -50,33 +54,46 @@ enum Channel {
     CH2 = 1
 };
 
+enum Frequency {
+  SPS_8 = 0b11,
+  SPS_64 = 0b10,
+  SPS_256 = 0b01,
+  SPS_1024 = 0b00
+};
+
 class PAC1932
 {
   public:
 
-    PAC1932(int _ADR);
-    PAC1932(void);
+    PAC1932(float _R1 = 0, float _R2 = 0, int _ADR = CSA_ADR); //Default resistor values to 0 to disable certian calcs
+    // PAC1932(void);
 
     bool begin(void);
     float GetBusVoltage(uint8_t Unit, bool Avg = false); //Do not take average by default 
     float GetSenseVoltage(int Unit, bool Avg = false); //Do no take average by default 
-    float GetCurrent(int Unit, float R, bool Avg = false); //Do not take average by default 
+    float GetCurrent(int Unit, bool Avg = false); //Do not take average by default 
     void SetVoltageDirection(uint8_t Unit, bool Direction); 
     void SetCurrentDirection(uint8_t Unit, bool Direction);
     bool GetVoltageDirection(uint8_t Unit);
     bool GetCurrentDirection(uint8_t Unit);
+    void SetFrequency(Frequency SampleRate);
+    float GetPowerAvg(int Unit);
+    uint8_t Update(uint8_t Clear = false); //Keep privarte?? FIX!
+    bool TestOverflow(); 
 
   private:
     int ADR;
+    float R[2] = {0}; //CSR resistor values [mOhms]
     int GetConfig(Config Value);
     int SetConfig(Config Value, uint8_t NewVal);
     int64_t ReadBlock(uint8_t Unit);
     uint32_t ReadCount();
     uint16_t ReadWord(uint8_t Reg, uint8_t Adr);
     uint16_t GetVoltageRaw(uint8_t Unit, bool Avg = false); //Keep private?? FIX! //By default do not take average 
-    uint8_t Update(uint8_t Clear = false); //Keep privarte?? FIX!
+    
     uint8_t WriteByte(uint8_t Reg, uint8_t Data, uint8_t Adr);
     uint8_t ReadByte(uint8_t Reg, uint8_t Adr);
+    uint64_t ReadAccBlock(uint8_t Unit, uint8_t Adr);
 };
 
 #endif

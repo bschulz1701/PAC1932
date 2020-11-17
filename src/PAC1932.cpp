@@ -1,9 +1,10 @@
 /******************************************************************************
-MCP3421.cpp
-Library for MCP3421 ADC
-Bobby Schulz @ Northern Widget LLC & UMN
-2/20/2018
+PCA1932.cpp
+Library for PCA1932 ADC
+Bobby Schulz 
+11/17/2020
 
+///////////////////FIX///////////////////////////////////
 MCP3421 is a 18 bit ADC, PGA, and various modes of resolution operation in order to facilitate various data rates
 
 "Simplicity is prerquisite for reliability"
@@ -18,16 +19,18 @@ Distributed as-is; no warranty is given.
 
 
 
-PAC1932::PAC1932(int _ADR)  //Set address
+PAC1932::PAC1932(float _R1, float _R2, int _ADR)  //Set address and CSR values [mOhms]
 {
   ADR = _ADR; 
+  R[0] = _R1;
+  R[1] = _R2;
   // Wire.begin();  
 }
 
-PAC1932::PAC1932(void)  //Use default address
-{
-  ADR = CSA_ADR; //Default address
-}
+// PAC1932::PAC1932(void)  //Use default address
+// {
+//   ADR = CSA_ADR; //Default address
+// }
 
 bool PAC1932::begin() //Initalize system 
 {
@@ -95,11 +98,11 @@ float PAC1932::GetSenseVoltage(int Unit, bool Avg) //Have option to take vaerage
   // else return 0; //If I2C state is not good, return 0
 }
 
-float PAC1932::GetCurrent(int Unit, float R, bool Avg) //R is in mohms //Have option to take vaerage of last 8 samples 
+float PAC1932::GetCurrent(int Unit, bool Avg) //Have option to take vaerage of last 8 samples 
 {
   bool CurrentDir = GetCurrentDirection(Unit);
   uint16_t VSense = GetVoltageRaw(SENSE1 + Unit, Avg);
-  float FSC = 100.0/R; //Calculate the full scale current, [Amps]
+  float FSC = 100.0/R[Unit]; //Calculate the full scale current, [Amps] using the defined resistor value
   float Current = 0; 
   if(CurrentDir) Current = FSC*(int16_t(VSense)/(32768.0)); //If set for bi-directional, cast to signed value
   else Current = FSC*(VSense/(65536.0));
@@ -231,19 +234,54 @@ int64_t PAC1932::ReadBlock(uint8_t Unit)
 
 uint32_t PAC1932::ReadCount()
 {
+  // Update(); //Update  accumulators 
+  // delay(2); //DEBUG!
   Wire.beginTransmission(ADR);
   Wire.write(COUNT_REG); //Write value to point to block
   Wire.endTransmission();
 
-  Wire.requestFrom(ADR, 3);
+  Wire.requestFrom(ADR, 3, false);
+  while(Wire.available() < 3); //FIX! Add timeout 
   // int8_t[6] Data = {0};
-  uint32_t Val = 0; //Concatonated result 
-  for(int i = 0; i < 6; i++){
+  uint32_t Data = 0; //Concatonated result 
+  uint32_t Val = 0; //Used to hold each I2C byte to force bit shift behavior 
+  for(int i = 0; i < 3; i++){
     // Data[i] = Wire.read(); //Read im each data byte
-    Val = Val | (Wire.read() << i); 
+    Val = Wire.read();
+    Data = Data | (Val << (2 - i)*8); //FIX!
   }
 
-  return Val; 
+  return Data; 
+
+}
+
+void PAC1932::SetFrequency(Frequency SampleRate)
+{ 
+  uint8_t Temp = ReadByte(CTRL_REG, ADR); //Grab current value from the control register 
+  Temp = Temp & 0x3F; //Clear sample bits
+  Temp = Temp | (SampleRate << 6); //Set new sample rate
+  WriteByte(CTRL_REG, Temp, ADR); //Write updated value back
+  // Update(); //Call non-destructive update to enforce new settings //FIX! Keep?
+  // delay(1); //Wait for new values 
+}
+
+//Check is overflow has occoured before last reset
+bool PAC1932::TestOverflow()
+{
+  uint8_t Control = ReadByte(CTRL_REG, ADR); //Grab control reg
+  if(Control & 0x01) return true;
+  else return false;
+}
+
+float PAC1932::GetPowerAvg(int Unit)
+{
+  uint32_t NumPoints = ReadCount(); //Grab the number of points taken
+  uint64_t Val = ReadAccBlock(Unit, ADR); //Grab the desired accumulator block
+  float ValAvg = float(Val)/float(NumPoints); //Normalize for quantity acumulated //FIX! Check for overflow??
+  float FSR = (3200.0/R[Unit]); //Find power FSR based on resistance of given sense resistor 
+  float P_Prop = float(ValAvg)/(134217728.0); //Divide by 2^27 to normalize //FIX! add support for negative values 
+  float PowerAvg = P_Prop*FSR; //Calculate average power 
+  return PowerAvg; //DEBUG!
 
 }
 
@@ -253,7 +291,7 @@ uint16_t PAC1932::ReadWord(uint8_t Reg, uint8_t Adr)  //Send command value, retu
   Wire.write(Reg);
   uint8_t Error = Wire.endTransmission(); //Store Error
 
-  Wire.requestFrom(Adr, 2, false);
+  Wire.requestFrom(Adr, 2, true);
   while(Wire.available() < 2); //FIX! Add timeout 
   uint8_t ByteHigh = Wire.read();  //Read in high and low bytes (big endian)
   uint8_t ByteLow = Wire.read();
@@ -267,12 +305,40 @@ uint8_t PAC1932::ReadByte(uint8_t Reg, uint8_t Adr)  //Send command value, retur
   Wire.write(Reg);
   uint8_t Error = Wire.endTransmission(); //Store Error
 
-  Wire.requestFrom(Adr, 1, false);
+  Wire.requestFrom(Adr, 1, true);
   while(Wire.available() < 1); //FIX! Add timeout 
   return Wire.read();  //Read single byte
   // uint8_t ByteLow = Wire.read();
 
   // return ((ByteHigh << 8) | ByteLow); //DEBUG!
+}
+
+uint64_t PAC1932::ReadAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumulator values of the desired channel 
+{
+  Wire.beginTransmission(Adr);
+  Wire.write(ACCUMULATOR_REG_0 + Unit); //Point to accumulator block plus offset
+  uint8_t Error = Wire.endTransmission(); //Store Error
+
+  // uint8_t Data[6] = {0}; //Instatiate data array to store block in
+  uint64_t Data = 0; //Concatonated data
+  Wire.requestFrom(Adr, 6, true);
+  while(Wire.available() < 6); //FIX! Add timeout 
+  // return Wire.read();  //Read single byte
+  uint64_t Val = 0; //Used to hold I2C reads
+  for(int i = 0; i < BLOCK_LEN; i++) { //Drop entire block into Data array
+    Val = Wire.read();
+    Data = Data | (Val << (BLOCK_LEN - i - 1)*8); //Shift and accumulate each byte
+    // Serial.println((BLOCK_LEN - i - 1)*8); //DEBUG!
+    // Serial.println(Val, HEX);
+  }
+
+  //FIX! Deal with signed results
+  //FIX! Check for errors before return
+
+  // uint8_t ByteLow = Wire.read();
+
+  // return ((ByteHigh << 8) | ByteLow); //DEBUG!
+  return Data; //Return concatonated value
 }
 
 uint8_t PAC1932::WriteByte(uint8_t Reg, uint8_t Data, uint8_t Adr)
@@ -285,8 +351,8 @@ uint8_t PAC1932::WriteByte(uint8_t Reg, uint8_t Data, uint8_t Adr)
 
 uint16_t PAC1932::GetVoltageRaw(uint8_t Reg, bool Avg)
 {
-  Update();
-  delay(1); //DEBUG!
+  // Update(); //DEBUG!
+  // delay(1); //DEBUG!
   uint8_t Offset = 0; //Offset used to select for average
   if(Avg) Offset = 0x08; //Offset for average registers 
   return ReadWord(Offset + Reg, ADR);
@@ -303,10 +369,16 @@ uint8_t PAC1932::Update(uint8_t Clear)
   if(!Clear) Reg = 0x1F;
   else if(Clear) Reg = 0x00;
 
+  // Wire.beginTransmission(ADR);
+  // Wire.write(Reg);
+  // Wire.write(0x00); //Initilize a clear
+  // return Wire.endTransmission();
+
   Wire.beginTransmission(ADR);
   Wire.write(Reg);
-  Wire.write(0x00); //Initilize a clear
-  return Wire.endTransmission();
+  // Wire.write(0x00); //Initilize a clear
+  uint8_t Error = Wire.endTransmission();
+  delay(2); //FIX! Find exact delay required 
 }
 
 
