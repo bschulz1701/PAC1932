@@ -35,6 +35,7 @@ Distributed as-is; no warranty is given.
 
 #define ACCUMULATOR_REG_0  0x03 //Begining of accumator blocks
 #define BLOCK_LEN 6 //Length of accumulator block in bytes 
+#define COUNT_LEN 3 //Number of bytes used for count value 
 
 enum Config {  //Setup configuration values, upper byte is register address, lower byte is shift and mask, lower nibble is shift, upper nibble is mask
   C1RS = 0x0A32,
@@ -84,6 +85,8 @@ class PAC1932
   private:
     int ADR;
     float R[2] = {0}; //CSR resistor values [mOhms]
+    // bool DirV[2] = {false}; //Default to uni-directional
+    // bool DirI[2] = {false}; //Default to uni-directional
     int GetConfig(Config Value);
     int SetConfig(Config Value, uint8_t NewVal);
     int64_t ReadBlock(uint8_t Unit);
@@ -93,7 +96,8 @@ class PAC1932
     
     uint8_t WriteByte(uint8_t Reg, uint8_t Data, uint8_t Adr);
     uint8_t ReadByte(uint8_t Reg, uint8_t Adr);
-    uint64_t ReadAccBlock(uint8_t Unit, uint8_t Adr);
+    int64_t ReadAccBlock(uint8_t Unit, uint8_t Adr);
+    void Print64(uint64_t Data);//DEBUG!!!!
 };
 
 #endif

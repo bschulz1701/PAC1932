@@ -38,7 +38,10 @@ bool PAC1932::begin() //Initalize system
   //Setup device for default operation
   Wire.beginTransmission(ADR);
   Wire.write(0x00);
-  return Wire.endTransmission(); 
+  uint8_t Error = Wire.endTransmission(); //Store error for status update
+  WriteByte(CTRL_REG, 0x0A, ADR); //Turn on ALERT on overflow //FIX??
+  if(Error == 0) return true; //Pass initialization
+  else return false; //Fail init if not ACKed 
   // SetConfig(C1RA, 0x00); //No averaging on CH1 bus measurment 
   // SetConfig(C2RA, 0x00); //No averaging on CH2 bus measurment 
   // SetConfig(C1RS, 0b11); //11 bit sample on CH1 bus
@@ -187,19 +190,25 @@ int PAC1932::SetConfig(Config Value, uint8_t NewVal) //Set the value of the give
 void PAC1932::SetVoltageDirection(uint8_t Unit, bool Direction)
 {
   uint8_t RegTemp = ReadByte(NEG_PWR, ADR);
+  uint8_t Error = 0; //Used to track errors from I2C communication 
   if(Direction) {
-    WriteByte(NEG_PWR, (RegTemp | (0x08 >> Unit)), ADR); //Write modified value back
+    Error = WriteByte(NEG_PWR, (RegTemp | (0x08 >> Unit)), ADR); //Write modified value back, check error
   }
-  else WriteByte(NEG_PWR, (RegTemp & ~(0x08 >> Unit)), ADR); //Clear desired bit, write back
+  else Error = WriteByte(NEG_PWR, (RegTemp & ~(0x08 >> Unit)), ADR); //Clear desired bit, write back, check error
+  // if(Error == 0) DirV[Unit] = Direction; //If write is sucessful, update direction value 
+  //FIX! Return error? 
 }
 
 void PAC1932::SetCurrentDirection(uint8_t Unit, bool Direction)
 {
   uint8_t RegTemp = ReadByte(NEG_PWR, ADR);
+  uint8_t Error = 0;
   if(Direction) {
-    WriteByte(NEG_PWR, (RegTemp | (0x80 >> Unit)), ADR); //Write modified value back
+    Error = WriteByte(NEG_PWR, (RegTemp | (0x80 >> Unit)), ADR); //Write modified value back, check error
   }
-  else WriteByte(NEG_PWR, (RegTemp & ~(0x80 >> Unit)), ADR); //Clear desired bit, write back
+  else Error = WriteByte(NEG_PWR, (RegTemp & ~(0x80 >> Unit)), ADR); //Clear desired bit, write back, check error
+  // if(Error == 0) DirI[Unit] = Direction; //If write is sucessful, update direction value 
+  //FIX! Return error?
 }
 
 bool PAC1932::GetVoltageDirection(uint8_t Unit)
@@ -240,15 +249,15 @@ uint32_t PAC1932::ReadCount()
   Wire.write(COUNT_REG); //Write value to point to block
   Wire.endTransmission();
 
-  Wire.requestFrom(ADR, 3, false);
-  while(Wire.available() < 3); //FIX! Add timeout 
+  Wire.requestFrom(ADR, COUNT_LEN, false);
+  while(Wire.available() < COUNT_LEN); //FIX! Add timeout 
   // int8_t[6] Data = {0};
   uint32_t Data = 0; //Concatonated result 
   uint32_t Val = 0; //Used to hold each I2C byte to force bit shift behavior 
-  for(int i = 0; i < 3; i++){
+  for(int i = COUNT_LEN - 1; i >= 0; i--){
     // Data[i] = Wire.read(); //Read im each data byte
     Val = Wire.read();
-    Data = Data | (Val << (2 - i)*8); //FIX!
+    Data = Data | (Val << (i)*8); //FIX!
   }
 
   return Data; 
@@ -261,8 +270,8 @@ void PAC1932::SetFrequency(Frequency SampleRate)
   Temp = Temp & 0x3F; //Clear sample bits
   Temp = Temp | (SampleRate << 6); //Set new sample rate
   WriteByte(CTRL_REG, Temp, ADR); //Write updated value back
-  // Update(); //Call non-destructive update to enforce new settings //FIX! Keep?
-  // delay(1); //Wait for new values 
+  Update(); //Call non-destructive update to enforce new settings //FIX! Keep?
+  delay(1); //Wait for new values 
 }
 
 //Check is overflow has occoured before last reset
@@ -275,13 +284,20 @@ bool PAC1932::TestOverflow()
 
 float PAC1932::GetPowerAvg(int Unit)
 {
+  bool CurrentDir = GetCurrentDirection(Unit);
   uint32_t NumPoints = ReadCount(); //Grab the number of points taken
-  uint64_t Val = ReadAccBlock(Unit, ADR); //Grab the desired accumulator block
+  int64_t Val = ReadAccBlock(Unit, ADR); //Grab the desired accumulator block
   float ValAvg = float(Val)/float(NumPoints); //Normalize for quantity acumulated //FIX! Check for overflow??
-  float FSR = (3200.0/R[Unit]); //Find power FSR based on resistance of given sense resistor 
-  float P_Prop = float(ValAvg)/(134217728.0); //Divide by 2^27 to normalize //FIX! add support for negative values 
+  float FSR = (3200.0/R[Unit]); //Find power FSR based on resistance of given sense resistor
+  float P_Prop = 0; //Proportional current value, not yet scaled by CSR value  
+  if(CurrentDir) P_Prop = float(ValAvg)/(134217728.0); //Divide by 2^27 to normalize 
+  else P_Prop = float(ValAvg)/(268435456.0); //Divide by 2^28 to normalize 
   float PowerAvg = P_Prop*FSR; //Calculate average power 
-  return PowerAvg; //DEBUG!
+  // Serial.println(NumPoints); //DEBUG!
+  // Serial.println(float(Val)); //DEBUG!
+  // Serial.println(ValAvg); //DEBUG! 
+  // Print64(Val); //DEBUG!
+  return PowerAvg; 
 
 }
 
@@ -307,30 +323,34 @@ uint8_t PAC1932::ReadByte(uint8_t Reg, uint8_t Adr)  //Send command value, retur
 
   Wire.requestFrom(Adr, 1, true);
   while(Wire.available() < 1); //FIX! Add timeout 
+
   return Wire.read();  //Read single byte
   // uint8_t ByteLow = Wire.read();
 
   // return ((ByteHigh << 8) | ByteLow); //DEBUG!
 }
 
-uint64_t PAC1932::ReadAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumulator values of the desired channel 
+int64_t PAC1932::ReadAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumulator values of the desired channel 
 {
   Wire.beginTransmission(Adr);
   Wire.write(ACCUMULATOR_REG_0 + Unit); //Point to accumulator block plus offset
   uint8_t Error = Wire.endTransmission(); //Store Error
 
   // uint8_t Data[6] = {0}; //Instatiate data array to store block in
-  uint64_t Data = 0; //Concatonated data
-  Wire.requestFrom(Adr, 6, true);
-  while(Wire.available() < 6); //FIX! Add timeout 
+  int64_t Data = 0; //Concatonated data
+  Wire.requestFrom(Adr, BLOCK_LEN, true);
+  while(Wire.available() < BLOCK_LEN); //FIX! Add timeout 
   // return Wire.read();  //Read single byte
   uint64_t Val = 0; //Used to hold I2C reads
-  for(int i = 0; i < BLOCK_LEN; i++) { //Drop entire block into Data array
+  for(int i = BLOCK_LEN - 1; i >= 0; i--) { //Drop entire block into Data array
     Val = Wire.read();
-    Data = Data | (Val << (BLOCK_LEN - i - 1)*8); //Shift and accumulate each byte
+    Data = Data | uint64_t(Val << (i)*8); //Shift and accumulate each byte
     // Serial.println((BLOCK_LEN - i - 1)*8); //DEBUG!
-    // Serial.println(Val, HEX);
+    // Serial.println((BLOCK_LEN - i)*8); //DEBUG!
+    // Print64(Data); //DEBUG!
+    // Serial.println(Val, HEX); //DEBUG!
   }
+  if(Data & 0x0000800000000000) Data = Data | 0xFFFF000000000000; //Perform manual sign extension 
 
   //FIX! Deal with signed results
   //FIX! Check for errors before return
@@ -371,14 +391,24 @@ uint8_t PAC1932::Update(uint8_t Clear)
 
   // Wire.beginTransmission(ADR);
   // Wire.write(Reg);
-  // Wire.write(0x00); //Initilize a clear
   // return Wire.endTransmission();
+  // Wire.write(0x00); //Initilize a clear
 
   Wire.beginTransmission(ADR);
   Wire.write(Reg);
-  // Wire.write(0x00); //Initilize a clear
+  Wire.write(0x00); //Initilize a clear
   uint8_t Error = Wire.endTransmission();
-  delay(2); //FIX! Find exact delay required 
+  delay(5); //FIX! Find exact delay required 
+  return Error;
+}
+
+void PAC1932::Print64(uint64_t Data) { //Print out 64 bit value in chunks 
+  for(int i = 0; i < 8; i++) { 
+    uint8_t SubValue = Data >> (8 - i - 1)*8;
+    Serial.print(SubValue, HEX); 
+  }
+  Serial.print("\n");
+
 }
 
 

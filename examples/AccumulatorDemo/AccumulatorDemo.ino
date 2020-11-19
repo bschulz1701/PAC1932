@@ -1,12 +1,17 @@
 #include <PAC1932.h>
 
 PAC1932 CSA(100, 50); //Instatitae with defualt address and 100mOhm on port 1 and 50mOhm on port 2
+volatile bool OverflowEvent = false; //Set when overflow occours, set by ISR, cleared in loop
 
 void setup() {
 	Serial.begin(115200);
 	while(!Serial); //Wait for Serial to turn on
 	CSA.begin();
-	CSA.SetCurrentDirection(CH1, BIDIRECTIONAL); //Set channel 1 to read bi-directional current 
+	CSA.SetFrequency(SPS_256);
+	CSA.SetCurrentDirection(CH1, UNIDIRECTIONAL); //Set channel 1 to read bi-directional current 
+	CSA.Update(true);
+	pinMode(2, INPUT_PULLUP); //DEBUG!
+	attachInterrupt(digitalPinToInterrupt(2), Overflow, FALLING); //FIX! Make conditional/seperate in demo?
 	Serial.println("Fight the Power!");
 
 }
@@ -14,14 +19,18 @@ void setup() {
 void loop()
 {
 	static int i = 0; //DEBUG!
-	if(CSA.TestOverflow()) Serial.println("ROLLOVER!"); 
+	// if(CSA.TestOverflow()) Serial.println("ROLLOVER!"); 
+	if(OverflowEvent) {
+		Serial.println("ROLLOVER!"); //Report event
+		OverflowEvent = false; //Clear flag
+	} 
 	CSA.Update(); //Call synchronous update 
 	float P1_Avg = CSA.GetPowerAvg(CH1); 
 	float Current1 = CSA.GetCurrent(CH1, true);
 	float VBus1 = CSA.GetBusVoltage(CH1);
 	Serial.print("Power1 = ");
-	Serial.print(P1_Avg*1000.0);
-	Serial.print("mW\t");
+	Serial.print(P1_Avg*1000000.0);
+	Serial.print("uW\t");
 	Serial.print("Bus1 = ");
 	Serial.print(VBus1);
 	Serial.print("V\t");
@@ -45,9 +54,14 @@ void loop()
 	// Serial.print("I2 = ");
 	// Serial.print(Current2);
 	// Serial.println("mA\t");
-	if(i++ == 5) { //DEBUG!
-		CSA.Update();
-		i = 0; 
-	}
-	delay(1000);
+	// if(i++ == 5) { //DEBUG!
+	// 	CSA.Update();
+	// 	i = 0; 
+	// }
+	delay(10000);
+}
+
+void Overflow()
+{
+	OverflowEvent = true; //Set flag
 }
