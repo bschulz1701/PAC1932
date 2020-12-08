@@ -95,7 +95,7 @@ class PAC1932
     uint16_t GetVoltageRaw(uint8_t Unit, bool Avg = false); //Keep private?? FIX! //By default do not take average 
     
     uint8_t WriteByte(uint8_t Reg, uint8_t Data, uint8_t Adr);
-    uint8_t ReadByte(uint8_t Reg, uint8_t Adr);
+    uint8_t ReadByte(uint8_t Reg, uint8_t Adr = CSA_ADR); //DEBUG! Move back to private after testing
     int64_t ReadAccBlock(uint8_t Unit, uint8_t Adr);
     void Print64(uint64_t Data);//DEBUG!!!!
 };

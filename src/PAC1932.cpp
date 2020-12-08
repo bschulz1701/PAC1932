@@ -350,9 +350,11 @@ int64_t PAC1932::ReadAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumula
     // Print64(Data); //DEBUG!
     // Serial.println(Val, HEX); //DEBUG!
   }
-  if(Data & 0x0000800000000000) Data = Data | 0xFFFF000000000000; //Perform manual sign extension 
 
-  //FIX! Deal with signed results
+  bool IsSigned = false; //Used to test of result should be signed, defaults to false 
+  IsSigned = GetVoltageDirection(Unit) | GetCurrentDirection(Unit); //If either bus or sense is set to bi-directional, use signed math
+  if((Data & 0x0000800000000000) && IsSigned) Data = Data | 0xFFFF000000000000; //Perform manual sign extension ONLY if using a signed value 
+
   //FIX! Check for errors before return
 
   // uint8_t ByteLow = Wire.read();
