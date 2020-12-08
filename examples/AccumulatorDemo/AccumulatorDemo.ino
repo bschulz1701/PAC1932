@@ -20,11 +20,21 @@ void loop()
 {
 	static int i = 0; //DEBUG!
 	// if(CSA.TestOverflow()) Serial.println("ROLLOVER!"); 
-	if(OverflowEvent) {
+	// if(OverflowEvent) {
+	if(CSA.TestOverflow()) { //Check via software if interrupt has occoured 
 		Serial.println("ROLLOVER!"); //Report event
+		Serial.print("Regs-Pre:\t");
+		Serial.print(CSA.ReadByte(0x01), HEX);
+		Serial.print("\t");
+		Serial.println(CSA.ReadByte(0x15), HEX);
+		CSA.Update(true); //Call synchronous update, clear accumulator on overflow 
+		Serial.print("Regs-Post:\t");
+		Serial.print(CSA.ReadByte(0x01), HEX);
+		Serial.print("\t");
+		Serial.println(CSA.ReadByte(0x15), HEX);
 		OverflowEvent = false; //Clear flag
 	} 
-	CSA.Update(); //Call synchronous update 
+	else CSA.Update(); //Call synchronous update 
 	float P1_Avg = CSA.GetPowerAvg(CH1); 
 	float Current1 = CSA.GetCurrent(CH1, true);
 	float VBus1 = CSA.GetBusVoltage(CH1);
@@ -36,7 +46,8 @@ void loop()
 	Serial.print("V\t");
 	Serial.print("I1 = ");
 	Serial.print(Current1);
-	Serial.print("mA\n");
+	Serial.print("mA\t");
+	Serial.println(millis()); //Print millis for debugging time passage //DEBUG! 
 	// float VBus1 = CSA.GetBusVoltage(CH1);
 	// float VBus2 = CSA.GetBusVoltage(CH2);
 	// float Current1 = CSA.GetCurrent(CH1, 40);
