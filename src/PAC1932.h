@@ -16,6 +16,7 @@ Distributed as-is; no warranty is given.
 #define PAC1932_h
 
 #include "Arduino.h"
+// #include "Particle.h"
 
 #define SENSE1 0x0B
 #define SENSE2 0x0C
@@ -66,10 +67,11 @@ class PAC1932
 {
   public:
 
-    PAC1932(float _R1 = 0, float _R2 = 0, int _ADR = CSA_ADR); //Default resistor values to 0 to disable certian calcs
-    // PAC1932(void);
+    // PAC1932(float _R1 = 0, float _R2 = 0, int _ADR = CSA_ADR); //Default resistor values to 0 to disable certian calcs
+    PAC1932(void);
 
-    bool begin(void);
+    // bool begin(void);
+    bool begin(float _R1 = 0, float _R2 = 0, int _ADR = CSA_ADR); //Default resistor values to 0 to disable certian calcs
     float GetBusVoltage(uint8_t Unit, bool Avg = false); //Do not take average by default 
     float GetSenseVoltage(int Unit, bool Avg = false); //Do no take average by default 
     float GetCurrent(int Unit, bool Avg = false); //Do not take average by default 
@@ -85,6 +87,7 @@ class PAC1932
   private:
     int ADR;
     float R[2] = {0}; //CSR resistor values [mOhms]
+    const unsigned long GlobalTimeout = 200; //Wait up to 200ms for I2C transactions 
     // bool DirV[2] = {false}; //Default to uni-directional
     // bool DirI[2] = {false}; //Default to uni-directional
     int GetConfig(Config Value);

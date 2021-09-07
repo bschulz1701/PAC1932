@@ -19,11 +19,14 @@ Distributed as-is; no warranty is given.
 
 
 
-PAC1932::PAC1932(float _R1, float _R2, int _ADR)  //Set address and CSR values [mOhms]
+// PAC1932::PAC1932(float _R1, float _R2, int _ADR)  //Set address and CSR values [mOhms]
+PAC1932::PAC1932()  //Set address and CSR values [mOhms]
 {
-  ADR = _ADR; 
-  R[0] = _R1;
-  R[1] = _R2;
+  // ADR = _ADR; 
+  // R[0] = _R1;
+  // R[1] = _R2;
+  // R[0] = 10.0; //DEBUG!
+  // R[1] = 10.0; //DEBUG!
   // Wire.begin();  
 }
 
@@ -32,8 +35,11 @@ PAC1932::PAC1932(float _R1, float _R2, int _ADR)  //Set address and CSR values [
 //   ADR = CSA_ADR; //Default address
 // }
 
-bool PAC1932::begin() //Initalize system 
+bool PAC1932::begin(float _R1, float _R2, int _ADR) //Initalize system 
 {
+  ADR = _ADR; 
+  R[0] = _R1;
+  R[1] = _R2;
   Wire.begin();  
   //Setup device for default operation
   Wire.beginTransmission(ADR);
@@ -252,7 +258,8 @@ uint32_t PAC1932::ReadCount()
   Wire.endTransmission();
 
   Wire.requestFrom(ADR, COUNT_LEN, false);
-  while(Wire.available() < COUNT_LEN); //FIX! Add timeout 
+  unsigned long LocalTime = millis();
+  while(Wire.available() < COUNT_LEN && ((millis() - LocalTime) < GlobalTimeout)); //Wait at most GlobalTimeout (Default 200ms)
   // int8_t[6] Data = {0};
   uint32_t Data = 0; //Concatonated result 
   uint32_t Val = 0; //Used to hold each I2C byte to force bit shift behavior 
@@ -310,7 +317,8 @@ uint16_t PAC1932::ReadWord(uint8_t Reg, uint8_t Adr)  //Send command value, retu
   uint8_t Error = Wire.endTransmission(); //Store Error
 
   Wire.requestFrom(Adr, 2, true);
-  while(Wire.available() < 2); //FIX! Add timeout 
+  unsigned long LocalTime = millis();
+  while(Wire.available() < 2 && ((millis() - LocalTime) < GlobalTimeout)); //Wait at most GlobalTimeout (Default 200ms)
   uint8_t ByteHigh = Wire.read();  //Read in high and low bytes (big endian)
   uint8_t ByteLow = Wire.read();
 
@@ -324,7 +332,8 @@ uint8_t PAC1932::ReadByte(uint8_t Reg, uint8_t Adr)  //Send command value, retur
   uint8_t Error = Wire.endTransmission(); //Store Error
 
   Wire.requestFrom(Adr, 1, true);
-  while(Wire.available() < 1); //FIX! Add timeout 
+  unsigned long LocalTime = millis();
+  while(Wire.available() < 1 && ((millis() - LocalTime) < GlobalTimeout)); //Wait at most GlobalTimeout (Default 200ms)
 
   return Wire.read();  //Read single byte
   // uint8_t ByteLow = Wire.read();
@@ -341,7 +350,8 @@ int64_t PAC1932::ReadAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumula
   // uint8_t Data[6] = {0}; //Instatiate data array to store block in
   int64_t Data = 0; //Concatonated data
   Wire.requestFrom(Adr, BLOCK_LEN, true);
-  while(Wire.available() < BLOCK_LEN); //FIX! Add timeout 
+  unsigned long LocalTime = millis();
+  while(Wire.available() < BLOCK_LEN && ((millis() - LocalTime) < GlobalTimeout)); //Wait at most GlobalTimeout (Default 200ms)
   // return Wire.read();  //Read single byte
   uint64_t Val = 0; //Used to hold I2C reads
   for(int i = BLOCK_LEN - 1; i >= 0; i--) { //Drop entire block into Data array
