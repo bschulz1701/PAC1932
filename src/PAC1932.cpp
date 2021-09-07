@@ -163,6 +163,7 @@ int PAC1932::GetConfig(Config Value) //Return the value of the given configurati
   // int Data = Wire.read();
 
   // return (Data >> Offset) & Mask;
+  return 0; //DEBUG!
 }
 
 int PAC1932::SetConfig(Config Value, uint8_t NewVal) //Set the value of the given configuration 
@@ -185,6 +186,7 @@ int PAC1932::SetConfig(Config Value, uint8_t NewVal) //Set the value of the give
   // Wire.write(Reg);
   // Wire.write(WriteVal); //Write adjusted value
   // return Wire.endTransmission(); //Return error condition
+  return 0; //DEBUG!
 }
 
 void PAC1932::SetVoltageDirection(uint8_t Unit, bool Direction)
