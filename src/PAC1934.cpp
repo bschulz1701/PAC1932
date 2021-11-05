@@ -253,8 +253,9 @@ uint32_t PAC1934::ReadCount()
   Wire.write(COUNT_REG); //Write value to point to block
   Wire.endTransmission();
 
+  unsigned long LocalTime = millis();
   Wire.requestFrom(ADR, COUNT_LEN, false);
-  while(Wire.available() < COUNT_LEN); //FIX! Add timeout 
+  while(Wire.available() < COUNT_LEN && (millis() - LocalTime) < I2C_Timeout);
   // int8_t[6] Data = {0};
   uint32_t Data = 0; //Concatonated result 
   uint32_t Val = 0; //Used to hold each I2C byte to force bit shift behavior 
@@ -311,8 +312,9 @@ uint16_t PAC1934::ReadWord(uint8_t Reg, uint8_t Adr)  //Send command value, retu
   Wire.write(Reg);
   uint8_t Error = Wire.endTransmission(); //Store Error
 
+  unsigned long LocalTime = millis();
   Wire.requestFrom(Adr, 2, true);
-  while(Wire.available() < 2); //FIX! Add timeout 
+  while(Wire.available() < 2 && (millis() - LocalTime) < I2C_Timeout);  
   uint8_t ByteHigh = Wire.read();  //Read in high and low bytes (big endian)
   uint8_t ByteLow = Wire.read();
 
@@ -325,8 +327,9 @@ uint8_t PAC1934::ReadByte(uint8_t Reg, uint8_t Adr)  //Send command value, retur
   Wire.write(Reg);
   uint8_t Error = Wire.endTransmission(); //Store Error
 
+  unsigned long LocalTime = millis();
   Wire.requestFrom(Adr, 1, true);
-  while(Wire.available() < 1); //FIX! Add timeout 
+  while(Wire.available() < 1 && (millis() - LocalTime) < I2C_Timeout); 
 
   return Wire.read();  //Read single byte
   // uint8_t ByteLow = Wire.read();
@@ -341,9 +344,10 @@ int64_t PAC1934::ReadAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumula
   uint8_t Error = Wire.endTransmission(); //Store Error
 
   // uint8_t Data[6] = {0}; //Instatiate data array to store block in
+  unsigned long LocalTime = millis();
   int64_t Data = 0; //Concatonated data
   Wire.requestFrom(Adr, BLOCK_LEN, true);
-  while(Wire.available() < BLOCK_LEN); //FIX! Add timeout 
+  while(Wire.available() < BLOCK_LEN && (millis() - LocalTime) < I2C_Timeout);  
   // return Wire.read();  //Read single byte
   uint64_t Val = 0; //Used to hold I2C reads
   for(int i = BLOCK_LEN - 1; i >= 0; i--) { //Drop entire block into Data array

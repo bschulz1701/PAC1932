@@ -93,6 +93,7 @@ class PAC1934
     float R[4] = {0}; //CSR resistor values [mOhms]
     // bool DirV[2] = {false}; //Default to uni-directional
     // bool DirI[2] = {false}; //Default to uni-directional
+    const unsigned long I2C_Timeout = 10; //Wait up to 10ms for device to respond 
     int GetConfig(Config Value);
     int SetConfig(Config Value, uint8_t NewVal);
     int64_t ReadBlock(uint8_t Unit);
