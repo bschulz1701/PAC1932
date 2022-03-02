@@ -36,6 +36,7 @@ Distributed as-is; no warranty is given.
 #define CTRL_REG 0x01
 #define COUNT_REG 0x02
 #define BUS_REG 0x07
+#define CHANNEL_REG 0x1C
 
 #define ACCUMULATOR_REG_0  0x03 //Begining of accumator blocks
 #define BLOCK_LEN 6 //Length of accumulator block in bytes 
@@ -87,6 +88,7 @@ class PAC1934
     float GetPowerAvg(int Unit);
     uint8_t Update(uint8_t Clear = false); //Keep privarte?? FIX!
     bool TestOverflow(); 
+    void EnableChannel(uint8_t Unit, bool State = true);
 
   private:
     int ADR;

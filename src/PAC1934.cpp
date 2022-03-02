@@ -42,6 +42,7 @@ bool PAC1934::begin() //Initalize system
   Wire.write(0x00);
   uint8_t Error = Wire.endTransmission(); //Store error for status update
   WriteByte(CTRL_REG, 0x0A, ADR); //Turn on ALERT on overflow //FIX??
+  // WriteByte(0x1C, 0x70, ADR); //DEBUG! Turn off measurment of all channels but channel 1
   if(Error == 0) return true; //Pass initialization
   else return false; //Fail init if not ACKed 
   // SetConfig(C1RA, 0x00); //No averaging on CH1 bus measurment 
@@ -408,7 +409,7 @@ uint8_t PAC1934::Update(uint8_t Clear)
   Wire.write(Reg);
   Wire.write(0x00); //Initilize a clear
   uint8_t Error = Wire.endTransmission();
-  delay(5); //FIX! Find exact delay required 
+  // delay(2); //FIX! Find exact delay required 
   return Error;
 }
 
@@ -419,6 +420,13 @@ void PAC1934::Print64(uint64_t Data) { //Print out 64 bit value in chunks
   }
   Serial.print("\n");
 
+}
+
+void PAC1934::EnableChannel(uint8_t Unit, bool State) { //Enable or disable reading of a given channel
+  uint8_t CurrentState = ReadByte(CHANNEL_REG, ADR);
+  CurrentState = CurrentState & (~(0x01 << (7 - Unit))); //Clear enable bit in question
+  CurrentState = CurrentState | (!State << (7 - Unit)); //Apply desired state to channel 
+  WriteByte(CHANNEL_REG, CurrentState, ADR); //DEBUG! Turn off measurment of all channels but channel 1
 }
 
 
