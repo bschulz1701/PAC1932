@@ -14,7 +14,7 @@ Distributed as-is; no warranty is given.
 ******************************************************************************/
 
 #include <Arduino.h>
-#include <PAC1934.h>
+#include "PAC1934.h"
 #include <Wire.h>
 
 
