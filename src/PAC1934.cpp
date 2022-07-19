@@ -60,9 +60,9 @@ bool PAC1934::begin() //Initalize system
 float PAC1934::GetBusVoltage(uint8_t Unit, bool Avg) //Have option to take vaerage of last 8 samples 
 {
   bool VoltageDir = GetVoltageDirection(Unit);
-  if(VoltageDir) return float(int16_t(GetVoltageRaw(BUS1 + Unit, Avg)))*(32.0/32768.0); //Return result in mV, cast to signed
-  else return float(GetVoltageRaw(BUS1 + Unit, Avg))*(32.0/65536.0); //Return result in mV
-  // return float(GetVoltageRaw(BUS1 + Unit, Avg))*(0.488); //Return result in mV 
+  if(VoltageDir) return float(int16_t(GetVoltageRaw(BUS1 + Unit, Avg)))*(32.0/32768.0); //Return result in V, cast to signed
+  else return float(GetVoltageRaw(BUS1 + Unit, Avg))*(32.0/65536.0); //Return result in V
+  // return float(GetVoltageRaw(BUS1 + Unit, Avg))*(0.488); //Return result in V 
 }
 
 float PAC1934::GetSenseVoltage(int Unit, bool Avg) //Have option to take vaerage of last 8 samples //FIX! encorporate bi-directionality 
