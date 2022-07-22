@@ -77,18 +77,18 @@ class PAC1934
     // PAC1934(void);
 
     bool begin(void);
-    float GetBusVoltage(uint8_t Unit, bool Avg = false); //Do not take average by default 
-    float GetSenseVoltage(int Unit, bool Avg = false); //Do no take average by default 
-    float GetCurrent(int Unit, bool Avg = false); //Do not take average by default 
-    void SetVoltageDirection(uint8_t Unit, bool Direction); 
-    void SetCurrentDirection(uint8_t Unit, bool Direction);
-    bool GetVoltageDirection(uint8_t Unit);
-    bool GetCurrentDirection(uint8_t Unit);
-    void SetFrequency(Frequency SampleRate);
-    float GetPowerAvg(int Unit);
-    uint8_t Update(uint8_t Clear = false); //Keep privarte?? FIX!
-    bool TestOverflow(); 
-    void EnableChannel(uint8_t Unit, bool State = true);
+    float getBusVoltage(uint8_t Unit, bool Avg = false); //Do not take average by default 
+    float getSenseVoltage(int Unit, bool Avg = false); //Do no take average by default 
+    float getCurrent(int Unit, bool Avg = false); //Do not take average by default 
+    void setVoltageDirection(uint8_t Unit, bool Direction); 
+    void setCurrentDirection(uint8_t Unit, bool Direction);
+    bool getVoltageDirection(uint8_t Unit);
+    bool getCurrentDirection(uint8_t Unit);
+    void setFrequency(Frequency SampleRate);
+    float getPowerAvg(int Unit);
+    uint8_t update(uint8_t Clear = false); //Keep privarte?? FIX!
+    bool testOverflow(); 
+    void enableChannel(uint8_t Unit, bool State = true);
 
   private:
     int ADR;
@@ -96,17 +96,17 @@ class PAC1934
     // bool DirV[2] = {false}; //Default to uni-directional
     // bool DirI[2] = {false}; //Default to uni-directional
     const unsigned long I2C_Timeout = 10; //Wait up to 10ms for device to respond 
-    int GetConfig(Config Value);
-    int SetConfig(Config Value, uint8_t NewVal);
-    int64_t ReadBlock(uint8_t Unit);
-    uint32_t ReadCount();
-    uint16_t ReadWord(uint8_t Reg, uint8_t Adr);
-    uint16_t GetVoltageRaw(uint8_t Unit, bool Avg = false); //Keep private?? FIX! //By default do not take average 
+    int getConfig(Config Value);
+    int setConfig(Config Value, uint8_t NewVal);
+    int64_t readBlock(uint8_t Unit);
+    uint32_t readCount();
+    uint16_t readWord(uint8_t Reg, uint8_t Adr);
+    uint16_t getVoltageRaw(uint8_t Unit, bool Avg = false); //Keep private?? FIX! //By default do not take average 
     
-    uint8_t WriteByte(uint8_t Reg, uint8_t Data, uint8_t Adr);
-    uint8_t ReadByte(uint8_t Reg, uint8_t Adr = CSA_ADR); //DEBUG! Move back to private after testing
-    int64_t ReadAccBlock(uint8_t Unit, uint8_t Adr);
-    void Print64(uint64_t Data);//DEBUG!!!!
+    uint8_t writeByte(uint8_t Reg, uint8_t Data, uint8_t Adr);
+    uint8_t readByte(uint8_t Reg, uint8_t Adr = CSA_ADR); //DEBUG! Move back to private after testing
+    int64_t readAccBlock(uint8_t Unit, uint8_t Adr);
+    void print64(uint64_t Data);//DEBUG!!!!
 };
 
 #endif

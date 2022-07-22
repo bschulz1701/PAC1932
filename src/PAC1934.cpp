@@ -41,7 +41,7 @@ bool PAC1934::begin() //Initalize system
   Wire.beginTransmission(ADR);
   Wire.write(0x00);
   uint8_t Error = Wire.endTransmission(); //Store error for status update
-  WriteByte(CTRL_REG, 0x0A, ADR); //Turn on ALERT on overflow //FIX??
+  writeByte(CTRL_REG, 0x0A, ADR); //Turn on ALERT on overflow //FIX??
   // WriteByte(0x1C, 0x70, ADR); //DEBUG! Turn off measurment of all channels but channel 1
   if(Error == 0) return true; //Pass initialization
   else return false; //Fail init if not ACKed 
@@ -57,17 +57,17 @@ bool PAC1934::begin() //Initalize system
   // SetConfig(C2SA, 0b00); //No averaging on CH2 sense measurment 
 }
 
-float PAC1934::GetBusVoltage(uint8_t Unit, bool Avg) //Have option to take vaerage of last 8 samples 
+float PAC1934::getBusVoltage(uint8_t Unit, bool Avg) //Have option to take vaerage of last 8 samples 
 {
-  bool VoltageDir = GetVoltageDirection(Unit);
-  if(VoltageDir) return float(int16_t(GetVoltageRaw(BUS1 + Unit, Avg)))*(32.0/32768.0); //Return result in V, cast to signed
-  else return float(GetVoltageRaw(BUS1 + Unit, Avg))*(32.0/65536.0); //Return result in V
+  bool VoltageDir = getVoltageDirection(Unit);
+  if(VoltageDir) return float(int16_t(getVoltageRaw(BUS1 + Unit, Avg)))*(32.0/32768.0); //Return result in V, cast to signed
+  else return float(getVoltageRaw(BUS1 + Unit, Avg))*(32.0/65536.0); //Return result in V
   // return float(GetVoltageRaw(BUS1 + Unit, Avg))*(0.488); //Return result in V 
 }
 
-float PAC1934::GetSenseVoltage(int Unit, bool Avg) //Have option to take vaerage of last 8 samples //FIX! encorporate bi-directionality 
+float PAC1934::getSenseVoltage(int Unit, bool Avg) //Have option to take vaerage of last 8 samples //FIX! encorporate bi-directionality 
 {
-  return float(GetVoltageRaw(SENSE1 + Unit, Avg))*(1.525878906); //Return result in uV
+  return float(getVoltageRaw(SENSE1 + Unit, Avg))*(1.525878906); //Return result in uV
   // //FSR = 10, 20, 40, 80mV
   // float FSR = 80; //Set to 80 by default
   // unsigned int Den = 2047; //Set to 2047 by default
@@ -104,10 +104,10 @@ float PAC1934::GetSenseVoltage(int Unit, bool Avg) //Have option to take vaerage
   // else return 0; //If I2C state is not good, return 0
 }
 
-float PAC1934::GetCurrent(int Unit, bool Avg) //Have option to take vaerage of last 8 samples 
+float PAC1934::getCurrent(int Unit, bool Avg) //Have option to take vaerage of last 8 samples 
 {
-  bool CurrentDir = GetCurrentDirection(Unit);
-  uint16_t VSense = GetVoltageRaw(SENSE1 + Unit, Avg);
+  bool CurrentDir = getCurrentDirection(Unit);
+  uint16_t VSense = getVoltageRaw(SENSE1 + Unit, Avg);
   float FSC = 100.0/R[Unit]; //Calculate the full scale current, [Amps] using the defined resistor value
   float Current = 0; 
   if(CurrentDir) Current = FSC*(int16_t(VSense)/(32768.0)); //If set for bi-directional, cast to signed value
@@ -152,7 +152,7 @@ float PAC1934::GetCurrent(int Unit, bool Avg) //Have option to take vaerage of l
   
 }
 
-int PAC1934::GetConfig(Config Value) //Return the value of the given configuration 
+int PAC1934::getConfig(Config Value) //Return the value of the given configuration 
 {
   // uint8_t Reg = Value >> 8; //Pull out register
   // uint8_t Offset = (Value & 0x0F); //Grab offset value 
@@ -169,7 +169,7 @@ int PAC1934::GetConfig(Config Value) //Return the value of the given configurati
   return 0; //DEBUG!
 }
 
-int PAC1934::SetConfig(Config Value, uint8_t NewVal) //Set the value of the given configuration 
+int PAC1934::setConfig(Config Value, uint8_t NewVal) //Set the value of the given configuration 
 {
   // uint8_t Reg = (Value >> 8); //Pull out register
   // uint8_t Offset = (Value & 0x0F); //Grab offset value 
@@ -192,43 +192,43 @@ int PAC1934::SetConfig(Config Value, uint8_t NewVal) //Set the value of the give
   return 0; //DEBUG!
 }
 
-void PAC1934::SetVoltageDirection(uint8_t Unit, bool Direction)
+void PAC1934::setVoltageDirection(uint8_t Unit, bool Direction)
 {
-  uint8_t RegTemp = ReadByte(NEG_PWR, ADR);
+  uint8_t RegTemp = readByte(NEG_PWR, ADR);
   uint8_t Error = 0; //Used to track errors from I2C communication 
   if(Direction) {
-    Error = WriteByte(NEG_PWR, (RegTemp | (0x08 >> Unit)), ADR); //Write modified value back, check error
+    Error = writeByte(NEG_PWR, (RegTemp | (0x08 >> Unit)), ADR); //Write modified value back, check error
   }
-  else Error = WriteByte(NEG_PWR, (RegTemp & ~(0x08 >> Unit)), ADR); //Clear desired bit, write back, check error
+  else Error = writeByte(NEG_PWR, (RegTemp & ~(0x08 >> Unit)), ADR); //Clear desired bit, write back, check error
   // if(Error == 0) DirV[Unit] = Direction; //If write is sucessful, update direction value 
   //FIX! Return error? 
 }
 
-void PAC1934::SetCurrentDirection(uint8_t Unit, bool Direction)
+void PAC1934::setCurrentDirection(uint8_t Unit, bool Direction)
 {
-  uint8_t RegTemp = ReadByte(NEG_PWR, ADR);
+  uint8_t RegTemp = readByte(NEG_PWR, ADR);
   uint8_t Error = 0;
   if(Direction) {
-    Error = WriteByte(NEG_PWR, (RegTemp | (0x80 >> Unit)), ADR); //Write modified value back, check error
+    Error = writeByte(NEG_PWR, (RegTemp | (0x80 >> Unit)), ADR); //Write modified value back, check error
   }
-  else Error = WriteByte(NEG_PWR, (RegTemp & ~(0x80 >> Unit)), ADR); //Clear desired bit, write back, check error
+  else Error = writeByte(NEG_PWR, (RegTemp & ~(0x80 >> Unit)), ADR); //Clear desired bit, write back, check error
   // if(Error == 0) DirI[Unit] = Direction; //If write is sucessful, update direction value 
   //FIX! Return error?
 }
 
-bool PAC1934::GetVoltageDirection(uint8_t Unit)
+bool PAC1934::getVoltageDirection(uint8_t Unit)
 {
-  uint8_t RegTemp = ReadByte(NEG_PWR, ADR);
+  uint8_t RegTemp = readByte(NEG_PWR, ADR);
   return (RegTemp >> (3 - Unit)) & 0x01; //Return Specified bit
 }
 
-bool PAC1934::GetCurrentDirection(uint8_t Unit)
+bool PAC1934::getCurrentDirection(uint8_t Unit)
 {
-  uint8_t RegTemp = ReadByte(NEG_PWR, ADR);
+  uint8_t RegTemp = readByte(NEG_PWR, ADR);
   return (RegTemp >> (7 - Unit)) & 0x01; //Return Specified bit
 }
 
-int64_t PAC1934::ReadBlock(uint8_t Unit)
+int64_t PAC1934::readBlock(uint8_t Unit)
 {
   Wire.beginTransmission(ADR);
   Wire.write(0x03 + Unit); //Write value to point to block
@@ -246,7 +246,7 @@ int64_t PAC1934::ReadBlock(uint8_t Unit)
 
 }
 
-uint32_t PAC1934::ReadCount()
+uint32_t PAC1934::readCount()
 {
   // Update(); //Update  accumulators 
   // delay(2); //DEBUG!
@@ -270,29 +270,29 @@ uint32_t PAC1934::ReadCount()
 
 }
 
-void PAC1934::SetFrequency(Frequency SampleRate)
+void PAC1934::setFrequency(Frequency SampleRate)
 { 
-  uint8_t Temp = ReadByte(CTRL_REG, ADR); //Grab current value from the control register 
+  uint8_t Temp = readByte(CTRL_REG, ADR); //Grab current value from the control register 
   Temp = Temp & 0x3F; //Clear sample bits
   Temp = Temp | (SampleRate << 6); //Set new sample rate
-  WriteByte(CTRL_REG, Temp, ADR); //Write updated value back
-  Update(); //Call non-destructive update to enforce new settings //FIX! Keep?
+  writeByte(CTRL_REG, Temp, ADR); //Write updated value back
+  update(); //Call non-destructive update to enforce new settings //FIX! Keep?
   delay(1); //Wait for new values 
 }
 
 //Check is overflow has occoured before last reset
-bool PAC1934::TestOverflow()
+bool PAC1934::testOverflow()
 {
-  uint8_t Control = ReadByte(CTRL_REG, ADR); //Grab control reg
+  uint8_t Control = readByte(CTRL_REG, ADR); //Grab control reg
   if(Control & 0x01) return true;
   else return false;
 }
 
-float PAC1934::GetPowerAvg(int Unit)
+float PAC1934::getPowerAvg(int Unit)
 {
-  bool CurrentDir = GetCurrentDirection(Unit);
-  uint32_t NumPoints = ReadCount(); //Grab the number of points taken
-  int64_t Val = ReadAccBlock(Unit, ADR); //Grab the desired accumulator block
+  bool CurrentDir = getCurrentDirection(Unit);
+  uint32_t NumPoints = readCount(); //Grab the number of points taken
+  int64_t Val = readAccBlock(Unit, ADR); //Grab the desired accumulator block
   float ValAvg = float(Val)/float(NumPoints); //Normalize for quantity acumulated //FIX! Check for overflow??
   float FSR = (3200.0/R[Unit]); //Find power FSR based on resistance of given sense resistor
   float P_Prop = 0; //Proportional current value, not yet scaled by CSR value  
@@ -307,7 +307,7 @@ float PAC1934::GetPowerAvg(int Unit)
 
 }
 
-uint16_t PAC1934::ReadWord(uint8_t Reg, uint8_t Adr)  //Send command value, returns entire 16 bit word
+uint16_t PAC1934::readWord(uint8_t Reg, uint8_t Adr)  //Send command value, returns entire 16 bit word
 {
   Wire.beginTransmission(Adr);
   Wire.write(Reg);
@@ -322,7 +322,7 @@ uint16_t PAC1934::ReadWord(uint8_t Reg, uint8_t Adr)  //Send command value, retu
   return ((ByteHigh << 8) | ByteLow); //DEBUG!
 }
 
-uint8_t PAC1934::ReadByte(uint8_t Reg, uint8_t Adr)  //Send command value, returns byte
+uint8_t PAC1934::readByte(uint8_t Reg, uint8_t Adr)  //Send command value, returns byte
 {
   Wire.beginTransmission(Adr);
   Wire.write(Reg);
@@ -338,7 +338,7 @@ uint8_t PAC1934::ReadByte(uint8_t Reg, uint8_t Adr)  //Send command value, retur
   // return ((ByteHigh << 8) | ByteLow); //DEBUG!
 }
 
-int64_t PAC1934::ReadAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumulator values of the desired channel 
+int64_t PAC1934::readAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumulator values of the desired channel 
 {
   Wire.beginTransmission(Adr);
   Wire.write(ACCUMULATOR_REG_0 + Unit); //Point to accumulator block plus offset
@@ -361,7 +361,7 @@ int64_t PAC1934::ReadAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumula
   }
 
   bool IsSigned = false; //Used to test of result should be signed, defaults to false 
-  IsSigned = GetVoltageDirection(Unit) | GetCurrentDirection(Unit); //If either bus or sense is set to bi-directional, use signed math
+  IsSigned = getVoltageDirection(Unit) | getCurrentDirection(Unit); //If either bus or sense is set to bi-directional, use signed math
   if((Data & 0x0000800000000000) && IsSigned) Data = Data | 0xFFFF000000000000; //Perform manual sign extension ONLY if using a signed value 
 
   //FIX! Check for errors before return
@@ -372,7 +372,7 @@ int64_t PAC1934::ReadAccBlock(uint8_t Unit, uint8_t Adr)  //Read 48 bit accumula
   return Data; //Return concatonated value
 }
 
-uint8_t PAC1934::WriteByte(uint8_t Reg, uint8_t Data, uint8_t Adr)
+uint8_t PAC1934::writeByte(uint8_t Reg, uint8_t Data, uint8_t Adr)
 {
   Wire.beginTransmission(Adr);
   Wire.write(Reg);
@@ -380,13 +380,13 @@ uint8_t PAC1934::WriteByte(uint8_t Reg, uint8_t Data, uint8_t Adr)
   return Wire.endTransmission();
 }
 
-uint16_t PAC1934::GetVoltageRaw(uint8_t Reg, bool Avg)
+uint16_t PAC1934::getVoltageRaw(uint8_t Reg, bool Avg)
 {
-  Update(); //DEBUG!
+  update(); //DEBUG!
   delay(1); //DEBUG!
   uint8_t Offset = 0; //Offset used to select for average
   if(Avg) Offset = 0x08; //Offset for average registers 
-  return ReadWord(Offset + Reg, ADR);
+  return readWord(Offset + Reg, ADR);
 }
 
 // float PAC1934::GetBusVoltage(uint8_t Unit)
@@ -394,7 +394,7 @@ uint16_t PAC1934::GetVoltageRaw(uint8_t Reg, bool Avg)
 //   return float(GetBusVoltageRaw(Unit))*(0.488); //Return result in mV
 // }
 
-uint8_t PAC1934::Update(uint8_t Clear)
+uint8_t PAC1934::update(uint8_t Clear)
 {
   uint8_t Reg = 0x1F; //Default to refesh, no clear
   if(!Clear) Reg = 0x1F;
@@ -413,7 +413,7 @@ uint8_t PAC1934::Update(uint8_t Clear)
   return Error;
 }
 
-void PAC1934::Print64(uint64_t Data) { //Print out 64 bit value in chunks 
+void PAC1934::print64(uint64_t Data) { //Print out 64 bit value in chunks 
   for(int i = 0; i < 8; i++) { 
     uint8_t SubValue = Data >> (8 - i - 1)*8;
     Serial.print(SubValue, HEX); 
@@ -422,11 +422,11 @@ void PAC1934::Print64(uint64_t Data) { //Print out 64 bit value in chunks
 
 }
 
-void PAC1934::EnableChannel(uint8_t Unit, bool State) { //Enable or disable reading of a given channel
-  uint8_t CurrentState = ReadByte(CHANNEL_REG, ADR);
+void PAC1934::enableChannel(uint8_t Unit, bool State) { //Enable or disable reading of a given channel
+  uint8_t CurrentState = readByte(CHANNEL_REG, ADR);
   CurrentState = CurrentState & (~(0x01 << (7 - Unit))); //Clear enable bit in question
   CurrentState = CurrentState | (!State << (7 - Unit)); //Apply desired state to channel 
-  WriteByte(CHANNEL_REG, CurrentState, ADR); //DEBUG! Turn off measurment of all channels but channel 1
+  writeByte(CHANNEL_REG, CurrentState, ADR); //DEBUG! Turn off measurment of all channels but channel 1
 }
 
 
