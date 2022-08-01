@@ -85,6 +85,7 @@ class PAC1934
     bool getVoltageDirection(uint8_t Unit);
     bool getCurrentDirection(uint8_t Unit);
     void setFrequency(Frequency SampleRate);
+    int getFrequency(); 
     float getPowerAvg(int Unit);
     uint8_t update(uint8_t Clear = false); //Keep privarte?? FIX!
     bool testOverflow(); 

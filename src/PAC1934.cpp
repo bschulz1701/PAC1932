@@ -39,7 +39,7 @@ bool PAC1934::begin() //Initalize system
   Wire.begin();  
   //Setup device for default operation
   Wire.beginTransmission(ADR);
-  Wire.write(0x00);
+  // Wire.write(0x00);
   uint8_t Error = Wire.endTransmission(); //Store error for status update
   writeByte(CTRL_REG, 0x0A, ADR); //Turn on ALERT on overflow //FIX??
   // WriteByte(0x1C, 0x70, ADR); //DEBUG! Turn off measurment of all channels but channel 1
@@ -152,6 +152,30 @@ float PAC1934::getCurrent(int Unit, bool Avg) //Have option to take vaerage of l
   
 }
 
+int PAC1934::getFrequency()
+{
+  uint8_t config = readByte(CTRL_REG, ADR); //Grab config value
+  uint8_t freqVal = (config >> 6); //Grab upper 2 bits of config, where sample rate is configured 
+  switch(freqVal) {
+    case 0b11:
+      return 8;
+      break;
+    
+    case 0b10:
+      return 64;
+      break;
+    
+    case 0b01:
+      return 256;
+      break;
+    
+    case 0b00:
+      return 1024;
+      break;
+  }
+  return 0; //Return error otherwise 
+}
+
 int PAC1934::getConfig(Config Value) //Return the value of the given configuration 
 {
   // uint8_t Reg = Value >> 8; //Pull out register
@@ -234,12 +258,14 @@ int64_t PAC1934::readBlock(uint8_t Unit)
   Wire.write(0x03 + Unit); //Write value to point to block
   Wire.endTransmission();
 
-  Wire.requestFrom(ADR, 6);
+  unsigned long LocalTime = millis();
+  Wire.requestFrom(ADR, 6, false);
+  while(Wire.available() < COUNT_LEN && (millis() - LocalTime) < I2C_Timeout);
   // int8_t[6] Data = {0};
   int64_t Val = 0; //Concatonated result 
-  for(int i = 0; i < 6; i++){
+  for(int i = 5; i >= 0; i--){
     // Data[i] = Wire.read(); //Read im each data byte
-    Val = Val | (Wire.read() << i); //FIX! Deal with sign! 
+    Val = Val | (Wire.read() << (i)*8); //FIX! Deal with sign! 
   }
 
   return Val; 
@@ -290,6 +316,8 @@ bool PAC1934::testOverflow()
 
 float PAC1934::getPowerAvg(int Unit)
 {
+  update();
+  delay(1);
   bool CurrentDir = getCurrentDirection(Unit);
   uint32_t NumPoints = readCount(); //Grab the number of points taken
   int64_t Val = readAccBlock(Unit, ADR); //Grab the desired accumulator block
