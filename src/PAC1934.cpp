@@ -36,15 +36,25 @@ PAC1934::PAC1934(float _R1, float _R2, float _R3, float _R4, int _ADR)  //Set ad
 
 bool PAC1934::begin() //Initalize system 
 {
-  Wire.begin();  
+  #if defined(ARDUINO) && ARDUINO >= 100 
+      Wire.begin();
+  #elif defined(PARTICLE)
+      if(!Wire.isEnabled()) Wire.begin(); //Only initialize I2C if not done already //INCLUDE FOR USE WITH PARTICLE 
+  #endif 
   //Setup device for default operation
-  Wire.beginTransmission(ADR);
-  // Wire.write(0x00);
-  uint8_t Error = Wire.endTransmission(); //Store error for status update
-  writeByte(CTRL_REG, 0x0A, ADR); //Turn on ALERT on overflow //FIX??
+  // Wire.beginTransmission(ADR);
+  // Wire.write(0xFD);
+  // Wire.endTransmission(); //Store error for status update
+  // Wire.read();
+  int val = readByte(PRODUCT_ID_REG, ADR);
+  Serial.print("CSA READING: "); //DEBUG!
+  Serial.println(val, HEX);
   // WriteByte(0x1C, 0x70, ADR); //DEBUG! Turn off measurment of all channels but channel 1
-  if(Error == 0) return true; //Pass initialization
-  else return false; //Fail init if not ACKed 
+  if(val != 0x5B) return false; //Fail if ID reg does not match expected for PAC1934
+  else { 
+    writeByte(CTRL_REG, 0x0A, ADR); //Turn on ALERT on overflow //FIX??
+    return true; //Pass initialization
+  }
   // SetConfig(C1RA, 0x00); //No averaging on CH1 bus measurment 
   // SetConfig(C2RA, 0x00); //No averaging on CH2 bus measurment 
   // SetConfig(C1RS, 0b11); //11 bit sample on CH1 bus
@@ -455,6 +465,15 @@ void PAC1934::enableChannel(uint8_t Unit, bool State) { //Enable or disable read
   CurrentState = CurrentState & (~(0x01 << (7 - Unit))); //Clear enable bit in question
   CurrentState = CurrentState | (!State << (7 - Unit)); //Apply desired state to channel 
   writeByte(CHANNEL_REG, CurrentState, ADR); //DEBUG! Turn off measurment of all channels but channel 1
+}
+
+bool PAC1934::setAddress(uint8_t _ADR)
+{
+  if(_ADR >= 0x10 && _ADR <= 0x1F) {
+    ADR = _ADR; //Check range and set
+    return true; //Return success
+  }
+  else return false; //Return failure due to range
 }
 
 

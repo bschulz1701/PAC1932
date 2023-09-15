@@ -37,6 +37,7 @@ Distributed as-is; no warranty is given.
 #define COUNT_REG 0x02
 #define BUS_REG 0x07
 #define CHANNEL_REG 0x1C
+#define PRODUCT_ID_REG 0xFD
 
 #define ACCUMULATOR_REG_0  0x03 //Begining of accumator blocks
 #define BLOCK_LEN 6 //Length of accumulator block in bytes 
@@ -90,6 +91,7 @@ class PAC1934
     uint8_t update(uint8_t Clear = false); //Keep privarte?? FIX!
     bool testOverflow(); 
     void enableChannel(uint8_t Unit, bool State = true);
+    bool setAddress(uint8_t _ADR);
 
   private:
     int ADR;
