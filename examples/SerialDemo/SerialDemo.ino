@@ -1,34 +1,35 @@
 #include <PAC1932.h>
 
-PAC1932 CSA;
+PAC1932 CSA(100, 50); //Instatiate CSA with 100mOhm CSR on Channel 1, and a 50mOhm CSR on Channel 2 
 
 void setup() {
-	Serial1.begin(115200);
-	while(!Serial1); //Wait for Serial1 to turn on
-	CSA.begin();
+	Serial.begin(115200); //Initialize serial for communication
+	while(!Serial); //Wait for Serial to turn on
+	CSA.begin(); //Initialze CSA
 	CSA.SetCurrentDirection(CH1, BIDIRECTIONAL); //Set channel 1 to read bi-directional current 
-	Serial1.println("Fight the Power!");
+	SA.SetCurrentDirection(CH2, UNIDIRECTIONAL); //Set channel 1 to read uni-directional current 
+	Serial.println("Fight the Power!");
 
 }
 
 void loop()
 {
-	float VBus1 = CSA.GetBusVoltage(CH1);
-	float VBus2 = CSA.GetBusVoltage(CH2);
-	float Current1 = CSA.GetCurrent(CH1, 40);
-	float Current2 = CSA.GetCurrent(CH2, 100);
+	float VBus1 = CSA.GetBusVoltage(CH1); //Grab bus voltage from Channel 1 [V]
+	float VBus2 = CSA.GetBusVoltage(CH2); //Grab bus voltage from Channel 2 [V]
+	float Current1 = CSA.GetCurrent(CH1); //Grab current (calculated based on CSR values) from Channel 1 [mA]
+	float Current2 = CSA.GetCurrent(CH2); //Grab current (calculated based on CSR values) from Channel 2 [mA]
 
-	Serial1.print("Bus1 = ");
-	Serial1.print(VBus1);
-	Serial1.print("V\t");
-	Serial1.print("Bus2 = ");
-	Serial1.print(VBus2);
-	Serial1.print("V\t");
-	Serial1.print("I1 = ");
-	Serial1.print(Current1);
-	Serial1.print("mA\t");
-	Serial1.print("I2 = ");
-	Serial1.print(Current2);
-	Serial1.println("mA\t");
+	Serial.print("Bus1 = "); //Print Bus1 value
+	Serial.print(VBus1);
+	Serial.print("V\t");
+	Serial.print("Bus2 = "); //Print Bus2 value
+	Serial.print(VBus2);
+	Serial.print("V\t");
+	Serial.print("I1 = "); //Print Current1 value
+	Serial.print(Current1);
+	Serial.print("mA\t");
+	Serial.print("I2 = "); //Print Current2 value
+	Serial.print(Current2);
+	Serial.println("mA\t");
 	delay(1000);
 }
