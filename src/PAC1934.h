@@ -78,6 +78,9 @@ class PAC1934
     // PAC1934(void);
 
     bool begin(void);
+    float getBusVoltage(uint8_t Unit, bool Avg, bool &Stat); //Do not take average by default, optional pass/fail return
+    float getSenseVoltage(int Unit, bool Avg, bool &Stat); //Do no take average by default, optional pass/fail return
+    float getCurrent(int Unit, bool Avg, bool &Stat); //Do not take average by default, optional pass/fail return
     float getBusVoltage(uint8_t Unit, bool Avg = false); //Do not take average by default 
     float getSenseVoltage(int Unit, bool Avg = false); //Do no take average by default 
     float getCurrent(int Unit, bool Avg = false); //Do not take average by default 
@@ -85,12 +88,13 @@ class PAC1934
     void setCurrentDirection(uint8_t Unit, bool Direction);
     bool getVoltageDirection(uint8_t Unit);
     bool getCurrentDirection(uint8_t Unit);
-    void setFrequency(Frequency SampleRate);
+    bool setFrequency(Frequency SampleRate);
     int getFrequency(); 
+    float getPowerAvg(int Unit, bool &Stat);
     float getPowerAvg(int Unit);
     uint8_t update(uint8_t Clear = false); //Keep privarte?? FIX!
     bool testOverflow(); 
-    void enableChannel(uint8_t Unit, bool State = true);
+    bool enableChannel(uint8_t Unit, bool State = true);
     bool setAddress(uint8_t _ADR);
 
   private:
@@ -101,14 +105,14 @@ class PAC1934
     const unsigned long I2C_Timeout = 10; //Wait up to 10ms for device to respond 
     int getConfig(Config Value);
     int setConfig(Config Value, uint8_t NewVal);
-    int64_t readBlock(uint8_t Unit);
-    uint32_t readCount();
-    uint16_t readWord(uint8_t Reg, uint8_t Adr);
-    uint16_t getVoltageRaw(uint8_t Unit, bool Avg = false); //Keep private?? FIX! //By default do not take average 
+    int64_t readBlock(uint8_t Unit, uint8_t &Err);
+    uint32_t readCount(uint8_t &Err);
+    uint16_t readWord(uint8_t Reg, uint8_t Adr, uint8_t &Err);
+    uint16_t getVoltageRaw(uint8_t Unit, bool Avg, uint8_t &Err); //Keep private?? FIX! //By default do not take average 
     
     uint8_t writeByte(uint8_t Reg, uint8_t Data, uint8_t Adr);
-    uint8_t readByte(uint8_t Reg, uint8_t Adr = CSA_ADR); //DEBUG! Move back to private after testing
-    int64_t readAccBlock(uint8_t Unit, uint8_t Adr);
+    uint8_t readByte(uint8_t Reg, uint8_t Adr, uint8_t &Err); //DEBUG! Move back to private after testing
+    int64_t readAccBlock(uint8_t Unit, uint8_t Adr, uint8_t &Err);
     void print64(uint64_t Data);//DEBUG!!!!
 };
 
